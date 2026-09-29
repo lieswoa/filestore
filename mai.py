@@ -32,6 +32,7 @@ from telegram.ext import (
     ApplicationHandlerStop,
     CallbackQueryHandler,
     ChatJoinRequestHandler,
+    ChatMemberHandler,
     CommandHandler,
     ContextTypes,
     ConversationHandler,
@@ -372,7 +373,7 @@ async def init_db() -> None:
 
             CREATE TABLE IF NOT EXISTS force_channels (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                username TEXT UNIQUE,
+                username TEXT,
                 chat_id INTEGER,
                 title TEXT,
                 invite_link TEXT,
@@ -386,6 +387,14 @@ async def init_db() -> None:
                 user_id INTEGER,
                 request_date TEXT,
                 PRIMARY KEY (chat_id, user_id)
+            );
+
+            CREATE TABLE IF NOT EXISTS known_chats (
+                chat_id INTEGER PRIMARY KEY,
+                title TEXT,
+                username TEXT,
+                chat_type TEXT,
+                updated_date TEXT
             );
 
             CREATE TABLE IF NOT EXISTS admins (
@@ -479,6 +488,14 @@ async def init_db() -> None:
                 log.info("Migrated: added %s.%s", table, column)
             except aiosqlite.OperationalError:
                 pass
+
+        try:
+            await db.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_force_channels_chat_id ON force_channels(chat_id)"
+            )
+            await db.commit()
+        except aiosqlite.OperationalError:
+            log.warning("Could not create unique index on force_channels.chat_id (likely duplicate rows).")
 
         for k, v in DEFAULT_SETTINGS.items():
             await db.execute(
@@ -3155,13 +3172,81 @@ async def cb_fc_add_mode(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         if mode == "request" else
         "\n\nI need to already be a <b>member</b> of it — admin rights aren't required."
     )
-    await query.message.reply_text(
-        "Now send either:\n"
-        "• A public <b>@username</b>\n"
-        "• Or a <b>https://t.me/username</b> link" + extra,
-        parse_mode=ParseMode.HTML,
-    )
+    known = await list_known_chats()
+    if known:
+        buttons = [
+            [InlineKeyboardButton(f"📌 {ch['title']}", callback_data=f"fc:addpick:{ch['chat_id']}")]
+            for ch in known
+        ]
+        kb = InlineKeyboardMarkup(buttons)
+        await query.message.reply_text(
+            "Send either:\n"
+            "• A public <b>@username</b>\n"
+            "• Or a <b>https://t.me/username</b> link\n\n"
+            "🔒 For a <b>private</b> channel/group (no public username), add me to it "
+            "first (as a member, or admin for request-only), then tap it below instead — "
+            "private invite links (<code>t.me/+xxxx</code>) can't be resolved directly." + extra,
+            parse_mode=ParseMode.HTML,
+            reply_markup=kb,
+        )
+    else:
+        await query.message.reply_text(
+            "Send either:\n"
+            "• A public <b>@username</b>\n"
+            "• Or a <b>https://t.me/username</b> link\n\n"
+            "🔒 For a <b>private</b> channel/group (no public username), a "
+            "<code>t.me/+xxxx</code> invite link can't be resolved directly — instead, "
+            "add me to that chat first, then come back and tap <b>Add Channel</b> again; "
+            "I'll show it here as a pickable option." + extra,
+            parse_mode=ParseMode.HTML,
+        )
     return FC_ADD
+
+
+async def _resolve_and_save_force_channel(bot, target, mode: str) -> tuple[bool, str]:
+    """target: @username / t.me link string, OR an int chat_id (from the pick-list).
+    Returns (ok, html_message)."""
+    try:
+        chat = await bot.get_chat(target)
+    except TelegramError as e:
+        return False, (
+            f"❌ Couldn't find that chat ({html.escape(str(e))}).\n"
+            "Make sure it's correct and I've already been added to it."
+        )
+
+    try:
+        me = await bot.get_me()
+        member = await bot.get_chat_member(chat.id, me.id)
+        if member.status in ("left", "kicked"):
+            return False, "❌ I'm not currently a member of that chat. Please add me first, then try again."
+        if mode == "request" and member.status != "administrator":
+            return False, (
+                "❌ For request-only mode I need to be an <b>admin</b> there "
+                "(with the Invite Users via Link permission) — otherwise Telegram "
+                "won't send me the join requests. Please promote me and try again."
+            )
+    except TelegramError as e:
+        return False, (
+            f"❌ I can't access that chat's member list ({html.escape(str(e))}).\n"
+            "Please make sure I've been added to it."
+        )
+
+    username = f"@{chat.username}" if chat.username else None
+    await _save_force_channel(chat.id, username, chat.title, str(chat.type), mode)
+    mode_label = "📨 Request-only" if mode == "request" else "👥 Normal"
+    kind = "🔒 private" if not username else "🌐 public"
+    return True, f"✅ Added: <b>{html.escape(chat.title)}</b> ({mode_label}, {kind})"
+
+
+async def cb_fc_add_pick(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    query = update.callback_query
+    await query.answer()
+    mode = context.user_data.get("fc_add_mode", "member")
+    chat_id = int(query.data.split(":")[2])
+    ok, text = await _resolve_and_save_force_channel(context.bot, chat_id, mode)
+    context.user_data.pop("fc_add_mode", None)
+    await query.message.reply_text(text, parse_mode=ParseMode.HTML)
+    return ConversationHandler.END if ok else FC_ADD
 
 
 async def conv_fc_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
@@ -3169,60 +3254,37 @@ async def conv_fc_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
     mode = context.user_data.get("fc_add_mode", "member")
     try:
         text = (msg.text or "").strip()
-        username = None
+        target = None
 
         if text.startswith("@") and re.match(r"^@[A-Za-z0-9_]{5,32}$", text):
-            username = text
+            target = text
+        elif re.match(r"^https?://t\.me/(\+|joinchat/)", text):
+            await msg.reply_text(
+                "🔒 That's a <b>private invite link</b> — I can't resolve those directly "
+                "(Telegram doesn't allow it). Add me to that channel/group first, then tap "
+                "<b>➕ Add Channel</b> again and pick it from the list I'll show you.",
+                parse_mode=ParseMode.HTML,
+            )
+            return FC_ADD
         else:
             m = re.match(r"^https?://t\.me/([A-Za-z0-9_]{5,32})/?$", text)
             if m:
-                username = f"@{m.group(1)}"
+                target = f"@{m.group(1)}"
+            elif re.match(r"^-?\d+$", text):
+                target = int(text)
 
-        if not username:
-            await msg.reply_text("❌ Please send a valid @username or a https://t.me/username link.")
-            return FC_ADD
-
-        try:
-            chat = await context.bot.get_chat(username)
-        except TelegramError as e:
+        if target is None:
             await msg.reply_text(
-                f"❌ Couldn't find that channel/group ({html.escape(str(e))}).\n"
-                "Make sure the username is correct and I've already been added to it.",
-                parse_mode=ParseMode.HTML,
+                "❌ Please send a valid @username, a https://t.me/username link, "
+                "a numeric chat ID, or pick a chat from the list above."
             )
             return FC_ADD
 
-        try:
-            me = await context.bot.get_me()
-            member = await context.bot.get_chat_member(chat.id, me.id)
-            if member.status in ("left", "kicked"):
-                await msg.reply_text("❌ I'm not currently a member of that chat. Please add me first, then try again.")
-                return FC_ADD
-            if mode == "request":
-                is_admin_here = member.status == "administrator"
-                if not is_admin_here:
-                    await msg.reply_text(
-                        "❌ For request-only mode I need to be an <b>admin</b> there "
-                        "(with the Invite Users via Link permission) — otherwise Telegram "
-                        "won't send me the join requests. Please promote me and try again.",
-                        parse_mode=ParseMode.HTML,
-                    )
-                    return FC_ADD
-        except TelegramError as e:
-            await msg.reply_text(
-                f"❌ I can't access that chat's member list ({html.escape(str(e))}).\n"
-                "Please make sure I've been added to it.",
-                parse_mode=ParseMode.HTML,
-            )
+        ok, reply_text = await _resolve_and_save_force_channel(context.bot, target, mode)
+        await msg.reply_text(reply_text, parse_mode=ParseMode.HTML)
+        if not ok:
             return FC_ADD
-
-        resolved_username = f"@{chat.username}" if chat.username else username
-        await _save_force_channel(chat.id, resolved_username, chat.title, str(chat.type), mode)
         context.user_data.pop("fc_add_mode", None)
-        mode_label = "📨 Request-only" if mode == "request" else "👥 Normal"
-        await msg.reply_text(
-            f"✅ Added: <b>{html.escape(chat.title)}</b> ({mode_label})", parse_mode=ParseMode.HTML
-        )
         return ConversationHandler.END
 
     except Exception as e:
@@ -3236,16 +3298,57 @@ async def conv_fc_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return ConversationHandler.END
 
 
-async def _save_force_channel(chat_id: int, username: str, title: str, chat_type: str, join_mode: str = "member") -> None:
+async def _save_force_channel(chat_id: int, username: str | None, title: str, chat_type: str, join_mode: str = "member") -> None:
     async with db_conn() as db:
         await db.execute(
             "INSERT INTO force_channels (username, chat_id, title, chat_type, join_mode, added_date) "
-            "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(username) DO UPDATE SET "
-            "chat_id=excluded.chat_id, title=excluded.title, chat_type=excluded.chat_type, "
+            "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET "
+            "username=excluded.username, title=excluded.title, chat_type=excluded.chat_type, "
             "join_mode=excluded.join_mode",
             (username, chat_id, title, chat_type, join_mode, datetime.utcnow().isoformat()),
         )
         await db.commit()
+
+
+async def upsert_known_chat(chat_id: int, title: str, username: str | None, chat_type: str) -> None:
+    async with db_conn() as db:
+        await db.execute(
+            "INSERT INTO known_chats (chat_id, title, username, chat_type, updated_date) "
+            "VALUES (?, ?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET "
+            "title=excluded.title, username=excluded.username, chat_type=excluded.chat_type, "
+            "updated_date=excluded.updated_date",
+            (chat_id, title, username, chat_type, datetime.utcnow().isoformat()),
+        )
+        await db.commit()
+
+
+async def forget_known_chat(chat_id: int) -> None:
+    async with db_conn() as db:
+        await db.execute("DELETE FROM known_chats WHERE chat_id=?", (chat_id,))
+        await db.commit()
+
+
+async def list_known_chats():
+    async with db_conn() as db:
+        db.row_factory = aiosqlite.Row
+        cur = await db.execute("SELECT * FROM known_chats ORDER BY updated_date DESC")
+        return await cur.fetchall()
+
+
+async def on_my_chat_member(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Tracks every group/channel (public or private) the bot is currently
+    a member of, so the Force Channel 'Add' flow can offer a pick-list —
+    this is what lets private chats (no public @username / link) be added."""
+    cmu = update.my_chat_member
+    if not cmu:
+        return
+    chat = cmu.chat
+    new_status = cmu.new_chat_member.status
+    if new_status in ("left", "kicked"):
+        await forget_known_chat(chat.id)
+    else:
+        username = f"@{chat.username}" if chat.username else None
+        await upsert_known_chat(chat.id, chat.title or chat.first_name or str(chat.id), username, str(chat.type))
 
 
 async def cb_fc_list(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -4674,6 +4777,7 @@ def build_application() -> Application:
     app.add_handler(CallbackQueryHandler(flood_guard), group=-1)
 
     app.add_handler(ChatJoinRequestHandler(on_chat_join_request))
+    app.add_handler(ChatMemberHandler(on_my_chat_member, ChatMemberHandler.MY_CHAT_MEMBER))
 
     app.add_handler(CommandHandler("start", cmd_start))
     app.add_handler(CommandHandler("help", cmd_help))
@@ -4836,6 +4940,7 @@ def build_application() -> Application:
         states={
             FC_ADD: [
                 CallbackQueryHandler(cb_fc_add_mode, pattern="^fc:addmode:(member|request)$"),
+                CallbackQueryHandler(cb_fc_add_pick, pattern=r"^fc:addpick:-?\d+$"),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, conv_fc_add),
             ],
         },
@@ -4974,7 +5079,7 @@ def main() -> None:
     app = build_application()
     log.info("Starting AVI FILE STORE BOT...")
     app.run_polling(
-        allowed_updates=["message", "callback_query", "chat_join_request"],
+        allowed_updates=["message", "callback_query", "chat_join_request", "my_chat_member"],
         drop_pending_updates=True,
     )
 
