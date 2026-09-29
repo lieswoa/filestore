@@ -678,15 +678,15 @@ async def remove_premium(user_id: int) -> None:
 
 def user_reply_keyboard(admin: bool) -> ReplyKeyboardMarkup:
     rows = [
-        [KeyboardButton("📁 Buy Files"), KeyboardButton("💎 My Wallet")],
-        [KeyboardButton("🎁 Daily Bonus"), KeyboardButton("🎰 Daily Spin")],
-        [KeyboardButton("🎁 Mystery Box"), KeyboardButton("🚀 Invite Friends")],
-        [KeyboardButton("🎟️ Redeem Code"), KeyboardButton("📊 My Stats")],
-        [KeyboardButton("🏆 Leaderboard"), KeyboardButton("🎫 Support Ticket")],
-        [KeyboardButton("💬 Support")],
+        [KeyboardButton("📁 Buy Files", style="primary"), KeyboardButton("💎 My Wallet", style="primary")],
+        [KeyboardButton("🎁 Daily Bonus", style="primary"), KeyboardButton("🎰 Daily Spin", style="success")],
+        [KeyboardButton("🎁 Mystery Box", style="success"), KeyboardButton("🚀 Invite Friends", style="primary")],
+        [KeyboardButton("🎟️ Redeem Code", style="primary"), KeyboardButton("📊 My Stats", style="primary")],
+        [KeyboardButton("🏆 Leaderboard", style="primary"), KeyboardButton("🎫 Support Ticket", style="primary")],
+        [KeyboardButton("💬 Support", style="primary")],
     ]
     if admin:
-        rows.append([KeyboardButton("👑 Admin Panel")])
+        rows.append([KeyboardButton("👑 Admin Panel", style="primary")])
     return ReplyKeyboardMarkup(rows, resize_keyboard=True)
 
 
@@ -704,35 +704,35 @@ def admin_reply_keyboard(is_owner: bool = True) -> ReplyKeyboardMarkup:
     buttons += [admin_mgr_label]
 
     rows = [
-        [KeyboardButton(buttons[i])] + (
-            [KeyboardButton(buttons[i + 1])] if i + 1 < len(buttons) else []
+        [KeyboardButton(buttons[i], style="primary")] + (
+            [KeyboardButton(buttons[i + 1], style="primary")] if i + 1 < len(buttons) else []
         )
         for i in range(0, len(buttons), 2)
     ]
-    rows.append([KeyboardButton("⬅️ Back to Main")])
+    rows.append([KeyboardButton("⬅️ Back to Main", style="primary")])
     return ReplyKeyboardMarkup(rows, resize_keyboard=True)
 
 
 def admin_panel_keyboard() -> InlineKeyboardMarkup:
     rows = [
-        [InlineKeyboardButton("📤 Upload File", callback_data="ad:upload"),
-         InlineKeyboardButton("📂 Manage Files", callback_data="ad:managefiles")],
-        [InlineKeyboardButton("💰 Wallet Manager", callback_data="ad:walletmgr"),
-         InlineKeyboardButton("🎟 Redeem Manager", callback_data="ad:redeemmgr")],
-        [InlineKeyboardButton("📡 Force Channels", callback_data="ad:fcmgr"),
-         InlineKeyboardButton("📢 Broadcast", callback_data="ad:broadcast")],
-        [InlineKeyboardButton("👥 User Manager", callback_data="ad:usermgr"),
-         InlineKeyboardButton("👑 Premium Manager", callback_data="ad:premiummgr")],
-        [InlineKeyboardButton("📊 Statistics", callback_data="ad:stats"),
-         InlineKeyboardButton("🛠 Maintenance", callback_data="ad:maintenance")],
-        [InlineKeyboardButton("⚙ Settings", callback_data="ad:settings"),
-         InlineKeyboardButton("🛡 Admin Manager", callback_data="ad:adminmgr")],
+        [InlineKeyboardButton("📤 Upload File", callback_data="ad:upload", style="primary"),
+         InlineKeyboardButton("📂 Manage Files", callback_data="ad:managefiles", style="primary")],
+        [InlineKeyboardButton("💰 Wallet Manager", callback_data="ad:walletmgr", style="primary"),
+         InlineKeyboardButton("🎟 Redeem Manager", callback_data="ad:redeemmgr", style="primary")],
+        [InlineKeyboardButton("📡 Force Channels", callback_data="ad:fcmgr", style="primary"),
+         InlineKeyboardButton("📢 Broadcast", callback_data="ad:broadcast", style="primary")],
+        [InlineKeyboardButton("👥 User Manager", callback_data="ad:usermgr", style="primary"),
+         InlineKeyboardButton("👑 Premium Manager", callback_data="ad:premiummgr", style="primary")],
+        [InlineKeyboardButton("📊 Statistics", callback_data="ad:stats", style="primary"),
+         InlineKeyboardButton("🛠 Maintenance", callback_data="ad:maintenance", style="primary")],
+        [InlineKeyboardButton("⚙ Settings", callback_data="ad:settings", style="primary"),
+         InlineKeyboardButton("🛡 Admin Manager", callback_data="ad:adminmgr", style="primary")],
     ]
     return InlineKeyboardMarkup(rows)
 
 
 def back_button(cb: str = "ad:home") -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=cb)]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data=cb, style="primary")]])
 
 
 
@@ -839,8 +839,8 @@ async def send_force_join_prompt(update: Update, missing: list[dict], bot=None) 
             continue
         is_request = (ch.get("join_mode") or "member") == "request"
         label = f"📨 {ch['title']}" if is_request else f"📢 {ch['title']}"
-        buttons.append([InlineKeyboardButton(label, url=url)])
-    buttons.append([InlineKeyboardButton("✅ Verify", callback_data="verify_join")])
+        buttons.append([InlineKeyboardButton(label, url=url, style="primary")])
+    buttons.append([InlineKeyboardButton("✅ Verify", callback_data="verify_join", style="primary")])
 
     has_request_channel = any((ch.get("join_mode") or "member") == "request" for ch in missing)
     lines = [
@@ -1225,7 +1225,7 @@ async def handle_support_ticket_prompt(update: Update, context: ContextTypes.DEF
     await update.effective_message.reply_text(
         "🎫 <b>Open a Support Ticket</b>\n\nWhat's the subject? (short, one line):",
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="ticket:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="ticket:cancel", style="primary")]]),
     )
     return TK_SUBJECT
 
@@ -1273,8 +1273,8 @@ async def conv_ticket_body(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         f"📌 Subject: {html.escape(subject)}\n\n📝 {html.escape(body)}"
     )
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💬 Reply", callback_data=f"ticket:reply:{ticket_id}"),
-         InlineKeyboardButton("✅ Close", callback_data=f"ticket:close:{ticket_id}")],
+        [InlineKeyboardButton("💬 Reply", callback_data=f"ticket:reply:{ticket_id}", style="primary"),
+         InlineKeyboardButton("✅ Close", callback_data=f"ticket:close:{ticket_id}", style="primary")],
     ])
     for admin_id in await get_all_admin_ids():
         try:
@@ -1315,7 +1315,7 @@ async def conv_ticket_reply(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         await update.message.reply_text("🚫 This ticket is already closed.")
         return ConversationHandler.END
 
-    user_kb = InlineKeyboardMarkup([[InlineKeyboardButton("💬 Reply", callback_data=f"ticket:ureply:{ticket_id}")]])
+    user_kb = InlineKeyboardMarkup([[InlineKeyboardButton("💬 Reply", callback_data=f"ticket:ureply:{ticket_id}", style="primary")]])
     try:
         await context.bot.send_message(
             ticket["user_id"],
@@ -1353,7 +1353,7 @@ async def cb_ticket_user_reply_start(update: Update, context: ContextTypes.DEFAU
     context.user_data["tk_user_reply_id"] = ticket_id
     await query.message.reply_text(
         "💬 Type your reply:",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="ticket:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="ticket:cancel", style="primary")]]),
     )
     return TK_USER_REPLY
 
@@ -1386,8 +1386,8 @@ async def conv_ticket_user_reply(update: Update, context: ContextTypes.DEFAULT_T
         f"👤 From: {html.escape(uname)}\n🆔 User ID: <code>{user.id}</code>\n\n💬 {html.escape(reply_text)}"
     )
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("💬 Reply", callback_data=f"ticket:reply:{ticket_id}"),
-         InlineKeyboardButton("✅ Close", callback_data=f"ticket:close:{ticket_id}")],
+        [InlineKeyboardButton("💬 Reply", callback_data=f"ticket:reply:{ticket_id}", style="primary"),
+         InlineKeyboardButton("✅ Close", callback_data=f"ticket:close:{ticket_id}", style="primary")],
     ])
     for admin_id in await get_all_admin_ids():
         try:
@@ -1436,7 +1436,7 @@ async def handle_file_request_prompt(update: Update, context: ContextTypes.DEFAU
     await update.effective_message.reply_text(
         "📥 <b>Request a File</b>\n\nTell us what file/project you're looking for — we'll try to add it:",
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="freq:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="freq:cancel", style="primary")]]),
     )
     return FR_TEXT
 
@@ -1467,7 +1467,7 @@ async def conv_file_request_text(update: Update, context: ContextTypes.DEFAULT_T
         f"📥 <b>New File Request #{req_id}</b>\n\n"
         f"👤 From: {html.escape(uname)}\n🆔 User ID: <code>{user.id}</code>\n\n📝 {html.escape(text)}"
     )
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("✅ Mark Fulfilled", callback_data=f"freq:done:{req_id}")]])
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("✅ Mark Fulfilled", callback_data=f"freq:done:{req_id}", style="primary")]])
     for admin_id in await get_all_admin_ids():
         try:
             await context.bot.send_message(admin_id, notify, parse_mode=ParseMode.HTML, reply_markup=kb)
@@ -1533,12 +1533,12 @@ async def send_wallet_view(update: Update, context: ContextTypes.DEFAULT_TYPE, e
         f"{DIVIDER}"
     )
     buttons = [
-        [InlineKeyboardButton("⭐ Buy Coins (Stars)", callback_data="wallet:buycoins"),
-         InlineKeyboardButton("💵 Buy Coins (৳)", callback_data="wallet:buybdt")],
-        [InlineKeyboardButton("📜 Transactions", callback_data="wallet:tx:0")],
+        [InlineKeyboardButton("⭐ Buy Coins (Stars)", callback_data="wallet:buycoins", style="success"),
+         InlineKeyboardButton("💵 Buy Coins (৳)", callback_data="wallet:buybdt", style="success")],
+        [InlineKeyboardButton("📜 Transactions", callback_data="wallet:tx:0", style="primary")],
     ]
     if not is_premium:
-        buttons.append([InlineKeyboardButton("👑 Buy Premium with Coins", callback_data="wallet:buypremium")])
+        buttons.append([InlineKeyboardButton("👑 Buy Premium with Coins", callback_data="wallet:buypremium", style="primary")])
     kb = InlineKeyboardMarkup(buttons)
     if edit and update.callback_query:
         await update.callback_query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
@@ -1559,8 +1559,8 @@ async def cb_wallet_buy_premium(update: Update, context: ContextTypes.DEFAULT_TY
     for p in pricing:
         label = "Lifetime" if p["days"] == 0 else f"{p['days']} Days"
         lines.append(f"• {label} — 🪙 {p['price']}")
-        buttons.append([InlineKeyboardButton(f"👑 {label} — {p['price']} coins", callback_data=f"premium:buy:{p['days']}:{p['price']}")])
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="wallet:home")])
+        buttons.append([InlineKeyboardButton(f"👑 {label} — {p['price']} coins", callback_data=f"premium:buy:{p['days']}:{p['price']}", style="primary")])
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="wallet:home", style="primary")])
     await query.edit_message_text("\n".join(lines), parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
 
@@ -1630,11 +1630,11 @@ async def cb_wallet_tx(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"wallet:tx:{page-1}"))
+        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"wallet:tx:{page-1}", style="primary"))
     if len(rows) == per_page:
-        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"wallet:tx:{page+1}"))
+        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"wallet:tx:{page+1}", style="primary"))
     buttons = [nav] if nav else []
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="wallet:home")])
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="wallet:home", style="primary")])
     await query.answer()
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -1656,8 +1656,8 @@ async def cb_buycoins_start(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     lines.append(f"\nSend Stars To: <b>@{html.escape(payment_username)}</b>")
     lines.append("\nAfter sending, tap <b>⭐ I Have Paid</b> below.")
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("⭐ I Have Paid", callback_data="buycoins:paid")],
-        [InlineKeyboardButton("⬅ Back", callback_data="wallet:home")],
+        [InlineKeyboardButton("⭐ I Have Paid", callback_data="buycoins:paid", style="primary")],
+        [InlineKeyboardButton("⬅ Back", callback_data="wallet:home", style="primary")],
     ])
     await query.edit_message_text("\n".join(lines), parse_mode=ParseMode.HTML, reply_markup=kb)
     return ConversationHandler.END
@@ -1668,7 +1668,7 @@ async def cb_buycoins_paid(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     await query.answer()
     await query.message.reply_text(
         "⭐ How many Stars did you send? (numbers only)",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="buycoins:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="buycoins:cancel", style="primary")]]),
     )
     return BC_STARS
 
@@ -1735,8 +1735,8 @@ async def conv_buycoins_screenshot(update: Update, context: ContextTypes.DEFAULT
         f"📅 Time: {fmt_date(datetime.utcnow().isoformat())}"
     )
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Accept", callback_data=f"pay:accept:{payment_id}"),
-         InlineKeyboardButton("❌ Reject", callback_data=f"pay:reject:{payment_id}")]
+        [InlineKeyboardButton("✅ Accept", callback_data=f"pay:accept:{payment_id}", style="primary"),
+         InlineKeyboardButton("❌ Reject", callback_data=f"pay:reject:{payment_id}", style="primary")]
     ])
     admin_ids = [OWNER_ID]
     for admin_id in admin_ids:
@@ -1772,7 +1772,7 @@ async def handle_buy_coins_bdt(update: Update, context: ContextTypes.DEFAULT_TYP
         f"{html.escape(details)}\n\n"
         "Send the amount via bKash/Nagad (Send Money), then tap <b>💵 I Have Paid</b> below."
     )
-    kb = InlineKeyboardMarkup([[InlineKeyboardButton("💵 I Have Paid", callback_data="buybdt:paid")]])
+    kb = InlineKeyboardMarkup([[InlineKeyboardButton("💵 I Have Paid", callback_data="buybdt:paid", style="primary")]])
     await update.effective_message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 
@@ -1781,7 +1781,7 @@ async def cb_buybdt_paid(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     await query.answer()
     await query.message.reply_text(
         "💵 How many Taka (৳) did you send? (numbers only)",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="buybdt:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="buybdt:cancel", style="primary")]]),
     )
     return BDT_AMOUNT
 
@@ -1851,8 +1851,8 @@ async def conv_buybdt_proof(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         f"📅 Time: {fmt_date(datetime.utcnow().isoformat())}"
     )
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Accept", callback_data=f"pay:accept:{payment_id}"),
-         InlineKeyboardButton("❌ Reject", callback_data=f"pay:reject:{payment_id}")]
+        [InlineKeyboardButton("✅ Accept", callback_data=f"pay:accept:{payment_id}", style="primary"),
+         InlineKeyboardButton("❌ Reject", callback_data=f"pay:reject:{payment_id}", style="primary")]
     ])
     admin_ids = [OWNER_ID]
     for admin_id in admin_ids:
@@ -2095,7 +2095,7 @@ async def handle_daily_spin(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         kb = None
         text += "\n\n⏳ Come back tomorrow for more spins!"
     else:
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🎰 SPIN NOW", callback_data="spin:go")]])
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("🎰 SPIN NOW", callback_data="spin:go", style="success")]])
     await update.effective_message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
 
@@ -2265,7 +2265,7 @@ async def handle_mystery_box(update: Update, context: ContextTypes.DEFAULT_TYPE)
         lines.append(f"{p['label']} — 🪙 {p['price']}")
         buttons.append([InlineKeyboardButton(
             f"{p['label']} ({p['price']} coins)", callback_data=f"mystery:open:{p['tier']}:{p['price']}"
-        )])
+        , style="success")])
     await update.effective_message.reply_text(
         "\n".join(lines), parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons)
     )
@@ -2308,7 +2308,7 @@ async def cb_mystery_open(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     await query.edit_message_text(
         f"🎉 <b>Mystery Box Opened!</b>\n\n{icon} <b>{html.escape(f['file_name'])}</b>\n📦 {fmt_size(f['file_size'])}",
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬇ Download Now", callback_data=f"file:dl:{f['file_pk']}")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬇ Download Now", callback_data=f"file:dl:{f['file_pk']}", style="success")]]),
     )
 
 
@@ -2330,7 +2330,7 @@ async def handle_invite_friends(update: Update, context: ContextTypes.DEFAULT_TY
     )
     await update.effective_message.reply_text(
         text, parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("👥 My Referrals", callback_data="myrefs:0")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("👥 My Referrals", callback_data="myrefs:0", style="primary")]]),
     )
 
 
@@ -2360,9 +2360,9 @@ async def cb_my_referrals(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"myrefs:{page-1}"))
+        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"myrefs:{page-1}", style="primary"))
     if len(rows) == per_page:
-        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"myrefs:{page+1}"))
+        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"myrefs:{page+1}", style="primary"))
     kb = InlineKeyboardMarkup([nav]) if nav else None
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
@@ -2397,8 +2397,8 @@ async def handle_redeem_prompt(update: Update, context: ContextTypes.DEFAULT_TYP
     if not await guard_user(update, context):
         return
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🔑 Redeem a Code", callback_data="redeem:enter")],
-        [InlineKeyboardButton("🎁 Convert Coins to Gift Code", callback_data="redeem:gift")],
+        [InlineKeyboardButton("🔑 Redeem a Code", callback_data="redeem:enter", style="primary")],
+        [InlineKeyboardButton("🎁 Convert Coins to Gift Code", callback_data="redeem:gift", style="primary")],
     ])
     await update.effective_message.reply_text(
         "🎟️ <b>Redeem Center</b>\n\nWhat would you like to do?",
@@ -2412,7 +2412,7 @@ async def cb_redeem_enter_start(update: Update, context: ContextTypes.DEFAULT_TY
     await query.answer()
     await query.message.reply_text(
         "🎟️ Please enter your redeem code:",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="redeem:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="redeem:cancel", style="primary")]]),
     )
     return RD_CODE
 
@@ -2499,7 +2499,7 @@ async def cb_redeem_gift_start(update: Update, context: ContextTypes.DEFAULT_TYP
         "Enter how many coins to convert into a one-time gift code "
         "(you can share it with anyone — they redeem it once for that many coins):",
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="redeem:cancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="redeem:cancel", style="primary")]]),
     )
     return GC_AMOUNT
 
@@ -2593,21 +2593,21 @@ async def send_file_list(update: Update, context: ContextTypes.DEFAULT_TYPE, pag
 
     if not rows:
         text = "📁 <b>Buy Files</b>\n\nNo files available right now."
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton("📁 My Purchases", callback_data="purchases:0")]])
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("📁 My Purchases", callback_data="purchases:0", style="primary")]])
     else:
         text = "📁 <b>Buy Files</b>\n\nSelect a file to view details:"
         buttons = []
         for r in rows:
             tag = "🟢 FREE" if r["price"] == 0 else f"🪙 {r['price']}"
-            buttons.append([InlineKeyboardButton(f"📄 {r['file_name']} — {tag}", callback_data=f"file:view:{r['file_pk']}")])
+            buttons.append([InlineKeyboardButton(f"📄 {r['file_name']} — {tag}", callback_data=f"file:view:{r['file_pk']}", style="primary")])
         nav = []
         if page > 0:
-            nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"files:list:{page-1}"))
+            nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"files:list:{page-1}", style="primary"))
         if len(rows) == per_page:
-            nav.append(InlineKeyboardButton("Next ➡", callback_data=f"files:list:{page+1}"))
+            nav.append(InlineKeyboardButton("Next ➡", callback_data=f"files:list:{page+1}", style="primary"))
         if nav:
             buttons.append(nav)
-        buttons.append([InlineKeyboardButton("📁 My Purchases", callback_data="purchases:0")])
+        buttons.append([InlineKeyboardButton("📁 My Purchases", callback_data="purchases:0", style="primary")])
         kb = InlineKeyboardMarkup(buttons)
 
     if edit and update.callback_query:
@@ -2649,11 +2649,11 @@ async def cb_file_view(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     )
     if f["price"] == 0 or owned:
         text += "\n🟢 <b>FREE</b>" if f["price"] == 0 and not owned else "\n✅ <b>You own this file</b>"
-        buttons = [[InlineKeyboardButton("⬇ Download", callback_data=f"file:dl:{file_pk}")]]
+        buttons = [[InlineKeyboardButton("⬇ Download", callback_data=f"file:dl:{file_pk}", style="primary")]]
     else:
         text += f"\n🪙 <b>{f['price']} Coins</b>"
-        buttons = [[InlineKeyboardButton("🛒 Buy Now", callback_data=f"file:buy:{file_pk}")]]
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="files:list:0")])
+        buttons = [[InlineKeyboardButton("🛒 Buy Now", callback_data=f"file:buy:{file_pk}", style="primary")]]
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="files:list:0", style="primary")])
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
 
@@ -2682,7 +2682,7 @@ async def cb_file_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
                 await query.edit_message_text(
                     "❌ <b>Not enough Coins.</b>\n\nPlease top up your wallet to continue.",
                     parse_mode=ParseMode.HTML,
-                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💎 Open Wallet", callback_data="wallet:home")]]),
+                    reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💎 Open Wallet", callback_data="wallet:home", style="primary")]]),
                 )
                 return
 
@@ -2697,7 +2697,7 @@ async def cb_file_buy(update: Update, context: ContextTypes.DEFAULT_TYPE) -> Non
     await query.edit_message_text(
         f"✅ <b>Purchase Successful!</b>\n\nYou now own <b>{html.escape(f['file_name'])}</b> forever.",
         parse_mode=ParseMode.HTML,
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬇ Download Now", callback_data=f"file:dl:{file_pk}")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("⬇ Download Now", callback_data=f"file:dl:{file_pk}", style="primary")]]),
     )
 
 
@@ -2757,13 +2757,13 @@ async def cb_my_purchases(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     if not rows:
         text = "📁 <b>My Purchases</b>\n\nYou haven't purchased any files yet."
-        kb = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data="files:list:0")]])
+        kb = InlineKeyboardMarkup([[InlineKeyboardButton("⬅ Back", callback_data="files:list:0", style="primary")]])
     else:
         text = "📁 <b>My Purchases</b>\n\n"
         buttons = []
         for r in rows:
-            buttons.append([InlineKeyboardButton(f"⬇ {r['file_name']}", callback_data=f"file:dl:{r['file_pk']}")])
-        buttons.append([InlineKeyboardButton("⬅ Back", callback_data="files:list:0")])
+            buttons.append([InlineKeyboardButton(f"⬇ {r['file_name']}", callback_data=f"file:dl:{r['file_pk']}", style="primary")])
+        buttons.append([InlineKeyboardButton("⬅ Back", callback_data="files:list:0", style="primary")])
         kb = InlineKeyboardMarkup(buttons)
 
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
@@ -2868,9 +2868,9 @@ async def show_upload_preview(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"📅 Upload Date: {fmt_date(datetime.utcnow().isoformat())}"
     )
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Publish", callback_data="up:publish"),
-         InlineKeyboardButton("✏ Edit", callback_data="up:edit")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="up:cancel")],
+        [InlineKeyboardButton("✅ Publish", callback_data="up:publish", style="primary"),
+         InlineKeyboardButton("✏ Edit", callback_data="up:edit", style="primary")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="up:cancel", style="primary")],
     ])
     await update.message.reply_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
     return UP_PREVIEW
@@ -2950,16 +2950,16 @@ async def send_manage_files_list(update: Update, context: ContextTypes.DEFAULT_T
     for r in rows:
         buttons.append([InlineKeyboardButton(
             f"📄 {r['file_name']} ({r['downloads_count']}⬇)", callback_data=f"mf:view:{r['file_pk']}:{page}"
-        )])
+        , style="primary")])
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"mf:list:{page-1}"))
+        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"mf:list:{page-1}", style="primary"))
     if len(rows) == per_page:
-        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"mf:list:{page+1}"))
+        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"mf:list:{page+1}", style="primary"))
     if nav:
         buttons.append(nav)
-    buttons.append([InlineKeyboardButton("🔍 Search Files", callback_data="mf:searchstart")])
-    buttons.append([InlineKeyboardButton("⬅ Back to Admin Panel", callback_data="ad:home")])
+    buttons.append([InlineKeyboardButton("🔍 Search Files", callback_data="mf:searchstart", style="primary")])
+    buttons.append([InlineKeyboardButton("⬅ Back to Admin Panel", callback_data="ad:home", style="primary")])
 
     if update.callback_query:
         await update.callback_query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
@@ -3003,7 +3003,7 @@ async def conv_mf_search(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         await update.message.reply_text("❌ No files matched that keyword.")
         return ConversationHandler.END
 
-    buttons = [[InlineKeyboardButton(f"📄 {r['file_name']}", callback_data=f"mf:view:{r['file_pk']}:0")] for r in rows]
+    buttons = [[InlineKeyboardButton(f"📄 {r['file_name']}", callback_data=f"mf:view:{r['file_pk']}:0", style="primary")] for r in rows]
     await update.message.reply_text(
         f"🔍 Found <b>{len(rows)}</b> matching file(s):", parse_mode=ParseMode.HTML,
         reply_markup=InlineKeyboardMarkup(buttons),
@@ -3042,13 +3042,13 @@ async def _render_mf_view(update: Update, file_pk: int, page: int) -> None:
     )
     feature_label = "📌 Unfeature" if f["featured"] else "📌 Make Featured"
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✏️ Edit Name", callback_data=f"mf:ename:{file_pk}"),
-         InlineKeyboardButton("✏️ Edit Desc", callback_data=f"mf:edesc:{file_pk}")],
-        [InlineKeyboardButton("✏️ Edit Price", callback_data=f"mf:eprice:{file_pk}"),
-         InlineKeyboardButton("🎁 Set Mystery Tier", callback_data=f"mf:etier:{file_pk}")],
-        [InlineKeyboardButton(feature_label, callback_data=f"mf:tfeat:{file_pk}:{page}")],
-        [InlineKeyboardButton("🗑 Delete File", callback_data=f"mf:delete:{file_pk}")],
-        [InlineKeyboardButton("⬅ Back", callback_data=f"mf:list:{page}")],
+        [InlineKeyboardButton("✏️ Edit Name", callback_data=f"mf:ename:{file_pk}", style="primary"),
+         InlineKeyboardButton("✏️ Edit Desc", callback_data=f"mf:edesc:{file_pk}", style="primary")],
+        [InlineKeyboardButton("✏️ Edit Price", callback_data=f"mf:eprice:{file_pk}", style="primary"),
+         InlineKeyboardButton("🎁 Set Mystery Tier", callback_data=f"mf:etier:{file_pk}", style="primary")],
+        [InlineKeyboardButton(feature_label, callback_data=f"mf:tfeat:{file_pk}:{page}", style="primary")],
+        [InlineKeyboardButton("🗑 Delete File", callback_data=f"mf:delete:{file_pk}", style="primary")],
+        [InlineKeyboardButton("⬅ Back", callback_data=f"mf:list:{page}", style="primary")],
     ])
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
 
@@ -3139,8 +3139,8 @@ async def cb_mf_delete(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         return
     await query.answer()
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Yes, Delete", callback_data=f"mf:delconfirm:{file_pk}"),
-         InlineKeyboardButton("❌ No", callback_data=f"mf:view:{file_pk}:0")],
+        [InlineKeyboardButton("✅ Yes, Delete", callback_data=f"mf:delconfirm:{file_pk}", style="primary"),
+         InlineKeyboardButton("❌ No", callback_data=f"mf:view:{file_pk}:0", style="primary")],
     ])
     await query.edit_message_text("⚠️ Are you sure you want to delete this file?", reply_markup=kb)
 
@@ -3163,10 +3163,10 @@ async def cb_admin_fcmgr(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if not await require_owner(update):
         return
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Add Channel", callback_data="fc:add"),
-         InlineKeyboardButton("➖ Remove Channel", callback_data="fc:remove")],
-        [InlineKeyboardButton("📋 Channel List", callback_data="fc:list")],
-        [InlineKeyboardButton("⬅ Back", callback_data="ad:home")],
+        [InlineKeyboardButton("➕ Add Channel", callback_data="fc:add", style="primary"),
+         InlineKeyboardButton("➖ Remove Channel", callback_data="fc:remove", style="primary")],
+        [InlineKeyboardButton("📋 Channel List", callback_data="fc:list", style="primary")],
+        [InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")],
     ])
     if update.callback_query:
         await update.callback_query.answer()
@@ -3181,8 +3181,8 @@ async def cb_fc_add_start(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
     query = update.callback_query
     await query.answer()
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("👥 Normal (must join)", callback_data="fc:addmode:member")],
-        [InlineKeyboardButton("📨 Request-only (must send join request)", callback_data="fc:addmode:request")],
+        [InlineKeyboardButton("👥 Normal (must join)", callback_data="fc:addmode:member", style="primary")],
+        [InlineKeyboardButton("📨 Request-only (must send join request)", callback_data="fc:addmode:request", style="primary")],
     ])
     await query.message.reply_text(
         "➕ <b>Add Force-Join Channel/Group</b>\n\n"
@@ -3212,7 +3212,7 @@ async def cb_fc_add_mode(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     known = await list_known_chats()
     if known:
         buttons = [
-            [InlineKeyboardButton(f"📌 {ch['title']}", callback_data=f"fc:addpick:{ch['chat_id']}")]
+            [InlineKeyboardButton(f"📌 {ch['title']}", callback_data=f"fc:addpick:{ch['chat_id']}", style="primary")]
             for ch in known
         ]
         kb = InlineKeyboardMarkup(buttons)
@@ -3438,8 +3438,8 @@ async def cb_fc_remove_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     if not channels:
         await query.edit_message_text("No channels to remove.", reply_markup=back_button("ad:fcmgr"))
         return
-    buttons = [[InlineKeyboardButton(f"➖ {ch['title']}", callback_data=f"fc:rm:{ch['id']}")] for ch in channels]
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:fcmgr")])
+    buttons = [[InlineKeyboardButton(f"➖ {ch['title']}", callback_data=f"fc:rm:{ch['id']}", style="primary")] for ch in channels]
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:fcmgr", style="primary")])
     await query.edit_message_text("➖ Select a channel to remove:", reply_markup=InlineKeyboardMarkup(buttons))
 
 
@@ -3463,16 +3463,16 @@ async def cb_admin_walletmgr(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     is_owner = update.effective_user.id == OWNER_ID
     rows = [
-        [InlineKeyboardButton("➕ Add Coins", callback_data="wm:add"),
-         InlineKeyboardButton("➖ Remove Coins", callback_data="wm:remove")],
-        [InlineKeyboardButton("♻ Reset Coins", callback_data="wm:reset")],
+        [InlineKeyboardButton("➕ Add Coins", callback_data="wm:add", style="primary"),
+         InlineKeyboardButton("➖ Remove Coins", callback_data="wm:remove", style="primary")],
+        [InlineKeyboardButton("♻ Reset Coins", callback_data="wm:reset", style="primary")],
     ]
     if is_owner:
-        rows.append([InlineKeyboardButton("🎯 Set Exact Balance", callback_data="wm:setbal")])
-        rows.append([InlineKeyboardButton("👥 Bulk Manage Users", callback_data="wm:bulk")])
-        rows.append([InlineKeyboardButton("📋 Pending Payments", callback_data="pp:list:0")])
-    rows.append([InlineKeyboardButton("📜 Wallet History", callback_data="wm:history")])
-    rows.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home")])
+        rows.append([InlineKeyboardButton("🎯 Set Exact Balance", callback_data="wm:setbal", style="primary")])
+        rows.append([InlineKeyboardButton("👥 Bulk Manage Users", callback_data="wm:bulk", style="primary")])
+        rows.append([InlineKeyboardButton("📋 Pending Payments", callback_data="pp:list:0", style="primary")])
+    rows.append([InlineKeyboardButton("📜 Wallet History", callback_data="wm:history", style="primary")])
+    rows.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")])
     kb = InlineKeyboardMarkup(rows)
     text = "💰 <b>Wallet Manager</b>\n\nEnter a User ID to manage their wallet, or view recent history."
     if update.callback_query:
@@ -3622,12 +3622,12 @@ async def conv_wm_bulk_ids(update: Update, context: ContextTypes.DEFAULT_TYPE) -
         if len(not_found) > 15:
             msg += f" (+{len(not_found) - 15} more)"
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("➕ Add Coins", callback_data="wb:add"),
-         InlineKeyboardButton("➖ Remove Coins", callback_data="wb:remove")],
-        [InlineKeyboardButton("🚫 Ban All", callback_data="wb:ban"),
-         InlineKeyboardButton("✅ Unban All", callback_data="wb:unban")],
-        [InlineKeyboardButton("👑 Give Premium", callback_data="wb:premium")],
-        [InlineKeyboardButton("❌ Cancel", callback_data="wb:cancel")],
+        [InlineKeyboardButton("➕ Add Coins", callback_data="wb:add", style="primary"),
+         InlineKeyboardButton("➖ Remove Coins", callback_data="wb:remove", style="primary")],
+        [InlineKeyboardButton("🚫 Ban All", callback_data="wb:ban", style="primary"),
+         InlineKeyboardButton("✅ Unban All", callback_data="wb:unban", style="primary")],
+        [InlineKeyboardButton("👑 Give Premium", callback_data="wb:premium", style="primary")],
+        [InlineKeyboardButton("❌ Cancel", callback_data="wb:cancel", style="primary")],
     ])
     await update.message.reply_text(msg, parse_mode=ParseMode.HTML, reply_markup=kb)
     return WB_ACTION
@@ -3709,10 +3709,10 @@ async def cb_wb_action_premium_menu(update: Update, context: ContextTypes.DEFAUL
     query = update.callback_query
     await query.answer()
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("7 Days", callback_data="wb:pset:7"),
-         InlineKeyboardButton("30 Days", callback_data="wb:pset:30")],
-        [InlineKeyboardButton("90 Days", callback_data="wb:pset:90"),
-         InlineKeyboardButton("Lifetime", callback_data="wb:pset:0")],
+        [InlineKeyboardButton("7 Days", callback_data="wb:pset:7", style="primary"),
+         InlineKeyboardButton("30 Days", callback_data="wb:pset:30", style="primary")],
+        [InlineKeyboardButton("90 Days", callback_data="wb:pset:90", style="primary"),
+         InlineKeyboardButton("Lifetime", callback_data="wb:pset:0", style="primary")],
     ])
     await query.message.reply_text("👑 Select Premium duration to grant to all selected users:", reply_markup=kb)
     return WB_PREMIUM
@@ -3765,7 +3765,7 @@ async def cb_pending_payments_list(update: Update, context: ContextTypes.DEFAULT
 
     if not rows and page == 0:
         text = "📋 <b>Pending Payments</b>\n\nNothing pending right now — all caught up! ✅"
-        buttons = [[InlineKeyboardButton("⬅ Back", callback_data="ad:walletmgr")]]
+        buttons = [[InlineKeyboardButton("⬅ Back", callback_data="ad:walletmgr", style="primary")]]
     else:
         text = f"📋 <b>Pending Payments</b>  —  Total: <b>{total}</b>\n\nTap Accept/Reject on any request below:\n"
         buttons = []
@@ -3774,17 +3774,17 @@ async def cb_pending_payments_list(update: Update, context: ContextTypes.DEFAULT
             uname = f"@{urow['username']}" if urow and urow["username"] else (urow["first_name"] if urow else f"ID {r['user_id']}")
             text += f"\n👤 <b>{html.escape(uname or str(r['user_id']))}</b> — ⭐{r['stars']} → 🪙{r['coins']} <i>({fmt_date(r['timestamp'])})</i>"
             buttons.append([
-                InlineKeyboardButton(f"✅ Accept #{r['payment_id']}", callback_data=f"pay:accept:{r['payment_id']}"),
-                InlineKeyboardButton(f"❌ Reject #{r['payment_id']}", callback_data=f"pay:reject:{r['payment_id']}"),
+                InlineKeyboardButton(f"✅ Accept #{r['payment_id']}", callback_data=f"pay:accept:{r['payment_id']}", style="primary"),
+                InlineKeyboardButton(f"❌ Reject #{r['payment_id']}", callback_data=f"pay:reject:{r['payment_id']}", style="primary"),
             ])
         nav = []
         if page > 0:
-            nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"pp:list:{page-1}"))
+            nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"pp:list:{page-1}", style="primary"))
         if (page + 1) * per_page < total:
-            nav.append(InlineKeyboardButton("Next ➡", callback_data=f"pp:list:{page+1}"))
+            nav.append(InlineKeyboardButton("Next ➡", callback_data=f"pp:list:{page+1}", style="primary"))
         if nav:
             buttons.append(nav)
-        buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:walletmgr")])
+        buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:walletmgr", style="primary")])
 
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
@@ -3816,13 +3816,13 @@ async def cb_admin_redeemmgr(update: Update, context: ContextTypes.DEFAULT_TYPE)
         return
     is_owner = update.effective_user.id == OWNER_ID
     rows = [
-        [InlineKeyboardButton("➕ Create Code", callback_data="rm:create")],
-        [InlineKeyboardButton("📋 List Codes", callback_data="rm:list")],
-        [InlineKeyboardButton("🗑 Delete Code", callback_data="rm:delstart")],
+        [InlineKeyboardButton("➕ Create Code", callback_data="rm:create", style="primary")],
+        [InlineKeyboardButton("📋 List Codes", callback_data="rm:list", style="primary")],
+        [InlineKeyboardButton("🗑 Delete Code", callback_data="rm:delstart", style="primary")],
     ]
     if is_owner:
-        rows.append([InlineKeyboardButton("🗑 Delete ALL Codes", callback_data="rm:delall")])
-    rows.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home")])
+        rows.append([InlineKeyboardButton("🗑 Delete ALL Codes", callback_data="rm:delall", style="primary")])
+    rows.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")])
     kb = InlineKeyboardMarkup(rows)
     if update.callback_query:
         await update.callback_query.answer()
@@ -3965,7 +3965,7 @@ async def cb_rm_delete_start(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await query.answer()
     await query.message.reply_text(
         "🗑 Enter the exact redeem code to delete:",
-        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="rm:delcancel")]]),
+        reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("❌ Cancel", callback_data="rm:delcancel", style="primary")]]),
     )
     return RM_DELETE
 
@@ -4002,8 +4002,8 @@ async def cb_rm_delete_all_confirm(update: Update, context: ContextTypes.DEFAULT
         await query.edit_message_text("No redeem codes to delete.", reply_markup=back_button("ad:redeemmgr"))
         return
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Yes, Delete ALL", callback_data="rm:delallconfirm"),
-         InlineKeyboardButton("❌ No", callback_data="ad:redeemmgr")],
+        [InlineKeyboardButton("✅ Yes, Delete ALL", callback_data="rm:delallconfirm", style="primary"),
+         InlineKeyboardButton("❌ No", callback_data="ad:redeemmgr", style="primary")],
     ])
     await query.edit_message_text(
         f"⚠️ <b>Delete ALL {count} Redeem Codes?</b>\n\nThis cannot be undone.",
@@ -4083,14 +4083,14 @@ async def send_user_profile(message_or_query, target_id: int, edit: bool = False
     )
     is_owner = message_or_query.from_user.id == OWNER_ID
     rows = [
-        [InlineKeyboardButton("➕ Add Coins", callback_data=f"um:addc:{target_id}"),
-         InlineKeyboardButton("➖ Remove Coins", callback_data=f"um:remc:{target_id}")],
+        [InlineKeyboardButton("➕ Add Coins", callback_data=f"um:addc:{target_id}", style="primary"),
+         InlineKeyboardButton("➖ Remove Coins", callback_data=f"um:remc:{target_id}", style="primary")],
     ]
     if is_owner:
-        rows.append([InlineKeyboardButton("🚫 Ban", callback_data=f"um:ban:{target_id}"),
-                     InlineKeyboardButton("✅ Unban", callback_data=f"um:unban:{target_id}")])
-    rows.append([InlineKeyboardButton("👑 Give Premium", callback_data=f"um:givep:{target_id}"),
-                 InlineKeyboardButton("❌ Remove Premium", callback_data=f"um:remp:{target_id}")])
+        rows.append([InlineKeyboardButton("🚫 Ban", callback_data=f"um:ban:{target_id}", style="primary"),
+                     InlineKeyboardButton("✅ Unban", callback_data=f"um:unban:{target_id}", style="primary")])
+    rows.append([InlineKeyboardButton("👑 Give Premium", callback_data=f"um:givep:{target_id}", style="primary"),
+                 InlineKeyboardButton("❌ Remove Premium", callback_data=f"um:remp:{target_id}", style="primary")])
     kb = InlineKeyboardMarkup(rows)
     if hasattr(message_or_query, "edit_message_text") and edit:
         await message_or_query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
@@ -4128,12 +4128,12 @@ async def send_all_users_list(update: Update, context: ContextTypes.DEFAULT_TYPE
     for r in rows:
         label = f"@{r['username']}" if r["username"] else (r["first_name"] or f"ID {r['user_id']}")
         tag = "🚫 " if r["is_banned"] else "👤 "
-        buttons.append([InlineKeyboardButton(f"{tag}{label}", callback_data=f"au:view:{r['user_id']}:{page}")])
+        buttons.append([InlineKeyboardButton(f"{tag}{label}", callback_data=f"au:view:{r['user_id']}:{page}", style="primary")])
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"au:list:{page-1}"))
+        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"au:list:{page-1}", style="primary"))
     if (page + 1) * per_page < total:
-        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"au:list:{page+1}"))
+        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"au:list:{page+1}", style="primary"))
     if nav:
         buttons.append(nav)
 
@@ -4180,11 +4180,11 @@ async def cb_um_premium(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         await send_user_profile(query, target_id, edit=True)
         return
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("7 Days", callback_data=f"um:pset:{target_id}:7"),
-         InlineKeyboardButton("30 Days", callback_data=f"um:pset:{target_id}:30")],
-        [InlineKeyboardButton("90 Days", callback_data=f"um:pset:{target_id}:90"),
-         InlineKeyboardButton("Lifetime", callback_data=f"um:pset:{target_id}:0")],
-        [InlineKeyboardButton("⬅ Back", callback_data=f"um:back:{target_id}")],
+        [InlineKeyboardButton("7 Days", callback_data=f"um:pset:{target_id}:7", style="primary"),
+         InlineKeyboardButton("30 Days", callback_data=f"um:pset:{target_id}:30", style="primary")],
+        [InlineKeyboardButton("90 Days", callback_data=f"um:pset:{target_id}:90", style="primary"),
+         InlineKeyboardButton("Lifetime", callback_data=f"um:pset:{target_id}:0", style="primary")],
+        [InlineKeyboardButton("⬅ Back", callback_data=f"um:back:{target_id}", style="primary")],
     ])
     await query.answer()
     await query.edit_message_text("👑 Select Premium Duration:", reply_markup=kb)
@@ -4305,10 +4305,10 @@ async def cb_admin_adminmgr(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     buttons = []
     is_owner = update.effective_user.id == OWNER_ID
     if is_owner:
-        buttons.append([InlineKeyboardButton("➕ Add Admin", callback_data="am:add"),
-                         InlineKeyboardButton("➖ Remove Admin", callback_data="am:remove")])
-        buttons.append([InlineKeyboardButton("📜 Action Log", callback_data="am:log:0")])
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home")])
+        buttons.append([InlineKeyboardButton("➕ Add Admin", callback_data="am:add", style="primary"),
+                         InlineKeyboardButton("➖ Remove Admin", callback_data="am:remove", style="primary")])
+        buttons.append([InlineKeyboardButton("📜 Action Log", callback_data="am:log:0", style="primary")])
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")])
     kb = InlineKeyboardMarkup(buttons)
 
     if update.callback_query:
@@ -4343,11 +4343,11 @@ async def cb_am_log_view(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
 
     nav = []
     if page > 0:
-        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"am:log:{page-1}"))
+        nav.append(InlineKeyboardButton("⬅ Prev", callback_data=f"am:log:{page-1}", style="primary"))
     if len(rows) == per_page:
-        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"am:log:{page+1}"))
+        nav.append(InlineKeyboardButton("Next ➡", callback_data=f"am:log:{page+1}", style="primary"))
     buttons = [nav] if nav else []
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:adminmgr")])
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:adminmgr", style="primary")])
     await query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=InlineKeyboardMarkup(buttons))
 
 
@@ -4381,8 +4381,8 @@ async def conv_am_add_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
     context.user_data["am_target_id"] = target_id
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("🥇 Senior Admin", callback_data="am:role:senior"),
-         InlineKeyboardButton("🥈 Junior Admin", callback_data="am:role:junior")],
+        [InlineKeyboardButton("🥇 Senior Admin", callback_data="am:role:senior", style="primary"),
+         InlineKeyboardButton("🥈 Junior Admin", callback_data="am:role:junior", style="primary")],
     ])
     await update.message.reply_text(
         "🛡 Choose their role:\n\n"
@@ -4440,8 +4440,8 @@ async def cb_am_remove_menu(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     for r in rows:
         u = await get_user_row(r["user_id"])
         label = f"@{u['username']}" if u and u["username"] else str(r["user_id"])
-        buttons.append([InlineKeyboardButton(f"➖ {label}", callback_data=f"am:rm:{r['user_id']}")])
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:adminmgr")])
+        buttons.append([InlineKeyboardButton(f"➖ {label}", callback_data=f"am:rm:{r['user_id']}", style="primary")])
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:adminmgr", style="primary")])
     await query.edit_message_text("➖ Select an admin to remove:", reply_markup=InlineKeyboardMarkup(buttons))
 
 
@@ -4576,8 +4576,8 @@ async def cb_admin_stats(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         f"⏳ Pending Payments: <b>{pending_payments}</b>"
     )
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📈 Top Downloaded Files", callback_data="stats:topfiles")],
-        [InlineKeyboardButton("⬅ Back", callback_data="ad:home")],
+        [InlineKeyboardButton("📈 Top Downloaded Files", callback_data="stats:topfiles", style="primary")],
+        [InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")],
     ])
     if update.callback_query:
         await update.callback_query.edit_message_text(text, parse_mode=ParseMode.HTML, reply_markup=kb)
@@ -4622,9 +4622,9 @@ async def cb_admin_maintenance(update: Update, context: ContextTypes.DEFAULT_TYP
         return
     current = await get_setting("maintenance", "0")
     kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("✅ Enable", callback_data="mt:on"),
-         InlineKeyboardButton("❌ Disable", callback_data="mt:off")],
-        [InlineKeyboardButton("⬅ Back", callback_data="ad:home")],
+        [InlineKeyboardButton("✅ Enable", callback_data="mt:on", style="primary"),
+         InlineKeyboardButton("❌ Disable", callback_data="mt:off", style="primary")],
+        [InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")],
     ])
     status = "🚧 ENABLED" if current == "1" else "✅ DISABLED"
     text = f"🛠 <b>Maintenance Mode</b>\n\nCurrent status: <b>{status}</b>"
@@ -4668,8 +4668,8 @@ SETTINGS_FIELDS = {
 async def cb_admin_settings(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not await require_owner(update):
         return
-    buttons = [[InlineKeyboardButton(label, callback_data=f"set:{key}")] for key, label in SETTINGS_FIELDS.items()]
-    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home")])
+    buttons = [[InlineKeyboardButton(label, callback_data=f"set:{key}", style="primary")] for key, label in SETTINGS_FIELDS.items()]
+    buttons.append([InlineKeyboardButton("⬅ Back", callback_data="ad:home", style="primary")])
     text = "⚙ <b>Settings</b>\n\nSelect a setting to edit:"
     if update.callback_query:
         await update.callback_query.answer()
