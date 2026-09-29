@@ -770,6 +770,37 @@ async def clear_join_request(chat_id: int, user_id: int) -> None:
         await db.commit()
 
 
+async def set_force_channel_invite_link(chat_id: int, invite_link: str) -> None:
+    async with db_conn() as db:
+        await db.execute(
+            "UPDATE force_channels SET invite_link=? WHERE chat_id=?", (invite_link, chat_id)
+        )
+        await db.commit()
+
+
+async def get_channel_join_url(bot, ch: dict) -> str | None:
+    """Returns the URL to show the user for this force-channel. Prefers a
+    stored invite link (needed for private chats, and for any 'request'
+    channel since that link is what actually forces the Request-to-Join
+    screen). Falls back to the public @username. If neither exists yet
+    (e.g. an older row added before invite-link generation existed), tries
+    to create + persist one now — this self-heals channels that previously
+    showed no button at all."""
+    if ch.get("invite_link"):
+        return ch["invite_link"]
+    if ch.get("username"):
+        return f"https://t.me/{ch['username'].lstrip('@')}"
+    try:
+        creates_request = (ch.get("join_mode") or "member") == "request"
+        link_obj = await bot.create_chat_invite_link(
+            chat_id=ch["chat_id"], creates_join_request=creates_request, name="ForceJoin"
+        )
+        await set_force_channel_invite_link(ch["chat_id"], link_obj.invite_link)
+        return link_obj.invite_link
+    except TelegramError:
+        return None
+
+
 async def check_force_join(bot, user_id: int) -> list[dict]:
     """Returns list of channels the user still needs to act on.
 
@@ -797,14 +828,14 @@ async def check_force_join(bot, user_id: int) -> list[dict]:
     return missing
 
 
-async def send_force_join_prompt(update: Update, missing: list[dict]) -> None:
+async def send_force_join_prompt(update: Update, missing: list[dict], bot=None) -> None:
+    bot = bot or update.get_bot()
     buttons = []
+    unresolved = []
     for ch in missing:
-        if ch.get("username"):
-            url = f"https://t.me/{ch['username'].lstrip('@')}"
-        elif ch.get("invite_link"):
-            url = ch["invite_link"]
-        else:
+        url = await get_channel_join_url(bot, ch)
+        if not url:
+            unresolved.append(ch)
             continue
         is_request = (ch.get("join_mode") or "member") == "request"
         label = f"📨 {ch['title']}" if is_request else f"📢 {ch['title']}"
@@ -822,6 +853,12 @@ async def send_force_join_prompt(update: Update, missing: list[dict]) -> None:
             "\n📨 Channels marked with 📨 are <b>request-only</b> — open them and tap "
             "<b>Request to Join</b>. You don't need to wait for approval, just send the "
             "request, then tap Verify."
+        )
+    if unresolved:
+        names = ", ".join(html.escape(ch["title"]) for ch in unresolved)
+        lines.append(
+            f"\n⚠️ I couldn't get a link for: <b>{names}</b>. Ask the owner to make sure "
+            "I'm still an admin there with the 'Invite Users via Link' permission."
         )
     text = "\n".join(lines)
 
@@ -982,7 +1019,7 @@ async def guard_user(update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool
     if not admin:
         missing = await check_force_join(context.bot, user.id)
         if missing:
-            await send_force_join_prompt(update, missing)
+            await send_force_join_prompt(update, missing, context.bot)
             return False
 
     return True
@@ -1019,7 +1056,7 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not admin:
         missing = await check_force_join(context.bot, user.id)
         if missing:
-            await send_force_join_prompt(update, missing)
+            await send_force_join_prompt(update, missing, context.bot)
             return
 
     await maybe_process_referral(context.bot, user.id)
@@ -3232,7 +3269,29 @@ async def _resolve_and_save_force_channel(bot, target, mode: str) -> tuple[bool,
         )
 
     username = f"@{chat.username}" if chat.username else None
-    await _save_force_channel(chat.id, username, chat.title, str(chat.type), mode)
+    invite_link = None
+    if mode == "request" or username is None:
+        if member.status != "administrator":
+            reason = (
+                "request-only mode" if mode == "request" else "a private chat (no public @username)"
+            )
+            return False, (
+                f"❌ For {reason} I need to be an <b>admin</b> there "
+                "(with the Invite Users via Link permission) so I can generate a join link. "
+                "Please promote me and try again."
+            )
+        try:
+            link_obj = await bot.create_chat_invite_link(
+                chat_id=chat.id, creates_join_request=(mode == "request"), name="ForceJoin"
+            )
+            invite_link = link_obj.invite_link
+        except TelegramError as e:
+            return False, (
+                f"❌ Couldn't create an invite link there ({html.escape(str(e))}).\n"
+                "Make sure I have the 'Invite Users via Link' admin permission."
+            )
+
+    await _save_force_channel(chat.id, username, chat.title, str(chat.type), mode, invite_link)
     mode_label = "📨 Request-only" if mode == "request" else "👥 Normal"
     kind = "🔒 private" if not username else "🌐 public"
     return True, f"✅ Added: <b>{html.escape(chat.title)}</b> ({mode_label}, {kind})"
@@ -3298,14 +3357,17 @@ async def conv_fc_add(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int
         return ConversationHandler.END
 
 
-async def _save_force_channel(chat_id: int, username: str | None, title: str, chat_type: str, join_mode: str = "member") -> None:
+async def _save_force_channel(
+    chat_id: int, username: str | None, title: str, chat_type: str,
+    join_mode: str = "member", invite_link: str | None = None,
+) -> None:
     async with db_conn() as db:
         await db.execute(
-            "INSERT INTO force_channels (username, chat_id, title, chat_type, join_mode, added_date) "
-            "VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET "
+            "INSERT INTO force_channels (username, chat_id, title, chat_type, join_mode, invite_link, added_date) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(chat_id) DO UPDATE SET "
             "username=excluded.username, title=excluded.title, chat_type=excluded.chat_type, "
-            "join_mode=excluded.join_mode",
-            (username, chat_id, title, chat_type, join_mode, datetime.utcnow().isoformat()),
+            "join_mode=excluded.join_mode, invite_link=excluded.invite_link",
+            (username, chat_id, title, chat_type, join_mode, invite_link, datetime.utcnow().isoformat()),
         )
         await db.commit()
 
